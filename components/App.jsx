@@ -1,6 +1,6 @@
 import React from "react";
-import AuthWrapper from "../components/AuthWrapper.jsx";
-import LateFineTrackerSupabase from "../components/LateFineTrackerSupabase.jsx";
+import AuthWrapper from "./AuthWrapper.jsx";
+import LateFineTrackerSupabase from "./LateFineTrackerSupabase.jsx";
 
 export default function App() {
   return (
