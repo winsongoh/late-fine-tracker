@@ -89,6 +89,29 @@ export default function InviteDialog({ game, currentUserId }) {
     setSuccess("Invite link copied to clipboard!");
   };
 
+  const generateAndCopyLink = async () => {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      // Create a generic invite (no specific email)
+      const invite = await createGameInvite(game.id, "anonymous@invite.link");
+      const inviteUrl = `${window.location.origin}?invite=${invite.invite_code}`;
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(inviteUrl);
+      setSuccess("Invite link generated and copied to clipboard!");
+      
+      // Refresh the lists to show the new invite
+      loadData();
+    } catch (error) {
+      setError(error.message || "Failed to generate invite link");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getStatusBadge = (invite) => {
     const now = new Date();
     const expiresAt = new Date(invite.expires_at);
@@ -165,6 +188,31 @@ export default function InviteDialog({ game, currentUserId }) {
                     {loading ? "Sending..." : "Send Invite"}
                   </Button>
                 </form>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Copy className="h-4 w-4" />
+                  Quick Share Link
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <p className="text-sm text-slate-600">
+                    Generate a shareable link that anyone can use to join this game
+                  </p>
+                  <Button 
+                    onClick={generateAndCopyLink} 
+                    disabled={loading}
+                    variant="outline" 
+                    className="w-full gap-2"
+                  >
+                    <Copy className="h-4 w-4" />
+                    {loading ? "Generating..." : "Generate & Copy Invite Link"}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
