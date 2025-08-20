@@ -19,8 +19,12 @@ import {
   updateGame,
   getUserGames,
   createGame,
-  subscribeToGameChanges
+  subscribeToGameChanges,
+  getCurrentUser,
+  acceptInvite
 } from "../lib/database.js";
+import InviteDialog from "./InviteDialog.jsx";
+import InviteAcceptance from "./InviteAcceptance.jsx";
 
 // Game Selection Component
 function GameSelector({ games, onSelectGame, onCreateGame }) {
@@ -113,15 +117,53 @@ export default function LateFineTrackerSupabase() {
   const [games, setGames] = useState([]);
   const [players, setPlayers] = useState([]);
   const [events, setEvents] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [newPlayerName, setNewPlayerName] = useState("");
   const [reason, setReason] = useState("");
   const [fineAmount, setFineAmount] = useState(10);
+  const [showInviteAcceptance, setShowInviteAcceptance] = useState(false);
 
   // Load user's games on mount
   useEffect(() => {
-    loadGames();
+    loadInitialData();
   }, []);
+
+  const loadInitialData = async () => {
+    try {
+      const user = await getCurrentUser();
+      setCurrentUser(user);
+      
+      // Check for invite code in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const inviteCode = urlParams.get('invite');
+      if (inviteCode) {
+        try {
+          const result = await acceptInvite(inviteCode);
+          if (result.success) {
+            // Clear the invite from URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            // Load games and select the invited game
+            const userGames = await getUserGames();
+            setGames(userGames);
+            const invitedGame = userGames.find(g => g.id === result.game_id);
+            if (invitedGame) {
+              setCurrentGame(invitedGame);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to accept invite from URL:", error);
+        }
+      } else {
+        await loadGames();
+        setShowInviteAcceptance(true); // Show pending invites
+      }
+    } catch (error) {
+      console.error("Failed to load initial data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Load game data when a game is selected
   useEffect(() => {
@@ -322,6 +364,7 @@ export default function LateFineTrackerSupabase() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <InviteDialog game={currentGame} currentUserId={currentUser?.id} />
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2"><Settings className="h-4 w-4" /> Settings</Button>
@@ -581,6 +624,22 @@ export default function LateFineTrackerSupabase() {
           Built for friendly bets. Data is synced to the cloud.
         </div>
       </div>
+
+      {/* Invite Acceptance Modal */}
+      {showInviteAcceptance && (
+        <InviteAcceptance 
+          onInviteAccepted={(gameId) => {
+            setShowInviteAcceptance(false);
+            loadGames().then(() => {
+              const acceptedGame = games.find(g => g.id === gameId);
+              if (acceptedGame) {
+                setCurrentGame(acceptedGame);
+              }
+            });
+          }}
+          onClose={() => setShowInviteAcceptance(false)}
+        />
+      )}
     </div>
   );
 }
