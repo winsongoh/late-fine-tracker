@@ -140,19 +140,36 @@ export default function LateFineTrackerSupabase() {
       if (inviteCode) {
         try {
           const result = await acceptInvite(inviteCode);
-          if (result.success) {
+          console.log('Invite acceptance result:', result);
+          
+          if (result && result.success) {
             // Clear the invite from URL
             window.history.replaceState({}, document.title, window.location.pathname);
+            
+            console.log('Invite accepted successfully, loading games...');
+            
             // Load games and select the invited game
             const userGames = await getUserGames();
+            console.log('Loaded games after invite acceptance:', userGames);
+            
             setGames(userGames);
             const invitedGame = userGames.find(g => g.id === result.game_id);
+            console.log('Found invited game:', invitedGame);
+            
             if (invitedGame) {
               setCurrentGame(invitedGame);
+              console.log('Set current game to invited game');
+            } else {
+              console.error('Invited game not found in user games list');
+              alert('Game joined successfully, but not showing in list. Please refresh the page.');
             }
+          } else {
+            console.error("Invite acceptance failed:", result?.message || "Unknown error");
+            alert(`Failed to join game: ${result?.message || "Unknown error"}`);
           }
         } catch (error) {
           console.error("Failed to accept invite from URL:", error);
+          alert(`Failed to join game: ${error.message}`);
         }
       } else {
         await loadGames();
@@ -177,6 +194,19 @@ export default function LateFineTrackerSupabase() {
       
       return unsubscribe;
     }
+  }, [currentGame]);
+
+  // Add keyboard shortcut for back navigation
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      // ESC key to go back
+      if (event.key === 'Escape' && currentGame) {
+        handleBackToGames();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
   }, [currentGame]);
 
   const loadGames = async () => {
@@ -214,9 +244,12 @@ export default function LateFineTrackerSupabase() {
   };
 
   const handleBackToGames = () => {
+    console.log('Back button clicked, returning to games list');
     setCurrentGame(null);
     setPlayers([]);
     setEvents([]);
+    // Force reload games to ensure fresh data
+    loadGames();
   };
 
   // ---- Derived Data ----
@@ -353,8 +386,13 @@ export default function LateFineTrackerSupabase() {
       <div className="max-w-5xl mx-auto">
         <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={handleBackToGames} className="gap-2">
-              <ArrowLeft className="h-4 w-4" /> Back
+            <Button 
+              variant="outline" 
+              onClick={handleBackToGames} 
+              className="gap-2 hover:bg-slate-100 transition-colors"
+              title="Return to games list"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back to Games
             </Button>
             <div>
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
