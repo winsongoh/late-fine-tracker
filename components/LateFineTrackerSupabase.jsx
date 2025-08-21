@@ -123,6 +123,7 @@ export default function LateFineTrackerSupabase() {
   const [reason, setReason] = useState("");
   const [fineAmount, setFineAmount] = useState(10);
   const [showInviteAcceptance, setShowInviteAcceptance] = useState(false);
+  const [isNavigatingBack, setIsNavigatingBack] = useState(false);
 
   // Load user's games on mount
   useEffect(() => {
@@ -157,6 +158,8 @@ export default function LateFineTrackerSupabase() {
             console.log('Found invited game:', invitedGame);
             
             if (invitedGame) {
+              console.log('🎯 Setting currentGame to invited game:', invitedGame.name);
+              console.trace('🎯 Call stack for invited game');
               setCurrentGame(invitedGame);
               console.log('Set current game to invited game');
             } else {
@@ -173,7 +176,7 @@ export default function LateFineTrackerSupabase() {
         }
       } else {
         await loadGames();
-        setShowInviteAcceptance(true); // Show pending invites
+        // setShowInviteAcceptance will be handled in loadGames()
       }
     } catch (error) {
       console.error("Failed to load initial data:", error);
@@ -213,6 +216,10 @@ export default function LateFineTrackerSupabase() {
     try {
       const userGames = await getUserGames();
       setGames(userGames);
+      // Only show invite acceptance if not navigating back
+      if (!isNavigatingBack) {
+        setShowInviteAcceptance(true);
+      }
     } catch (error) {
       console.error("Failed to load games:", error);
     } finally {
@@ -235,21 +242,31 @@ export default function LateFineTrackerSupabase() {
   };
 
   const handleSelectGame = (game) => {
+    console.log('🎮 handleSelectGame called with:', game?.name);
+    console.trace('🎮 Call stack for handleSelectGame');
     setCurrentGame(game);
   };
 
   const handleCreateGame = (newGame) => {
+    console.log('🆕 handleCreateGame called with:', newGame?.name);
+    console.trace('🆕 Call stack for handleCreateGame');
     setGames(prev => [newGame, ...prev]);
     setCurrentGame(newGame);
   };
 
   const handleBackToGames = () => {
-    console.log('Back button clicked, returning to games list');
+    console.log('🔙 Back button clicked, returning to games list');
+    console.log('🔙 Current game before reset:', currentGame?.name);
+    setIsNavigatingBack(true);
     setCurrentGame(null);
+    console.log('🔙 Set currentGame to null');
     setPlayers([]);
     setEvents([]);
-    // Force reload games to ensure fresh data
-    loadGames();
+    // Don't reload games immediately - just clear state
+    setTimeout(() => {
+      console.log('🔙 Setting isNavigatingBack to false after timeout');
+      setIsNavigatingBack(false);
+    }, 100);
   };
 
   // ---- Derived Data ----
@@ -664,13 +681,16 @@ export default function LateFineTrackerSupabase() {
       </div>
 
       {/* Invite Acceptance Modal */}
-      {showInviteAcceptance && (
+      {showInviteAcceptance && !isNavigatingBack && (
         <InviteAcceptance 
           onInviteAccepted={(gameId) => {
+            console.log('📨 Invite accepted for game ID:', gameId);
+            console.trace('📨 Call stack for invite acceptance');
             setShowInviteAcceptance(false);
             loadGames().then(() => {
               const acceptedGame = games.find(g => g.id === gameId);
               if (acceptedGame) {
+                console.log('📨 Setting currentGame to accepted game:', acceptedGame.name);
                 setCurrentGame(acceptedGame);
               }
             });
